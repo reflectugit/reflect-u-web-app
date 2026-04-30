@@ -4,33 +4,30 @@ import { useState, useEffect, useCallback } from "react";
 import { getIdToken } from "firebase/auth";
 import { auth } from "@/lib/firebase-client";
 
-type Layout = {
-  top_left: string;
-  top_right: string;
-  mid_left: string;
-  mid_right: string;
-  bottom_left: string;
-  bottom_right: string;
-};
+// Each zone holds 0–2 widget keys. Empty string = no widget for that slot.
+type Layout = Record<
+  "top_left" | "top_right" | "mid_left" | "mid_right" | "bottom_left" | "bottom_right",
+  string[]
+>;
 
 const DEFAULT_LAYOUT: Layout = {
-  top_left: "clock_date",
-  top_right: "weather",
-  mid_left: "calendar",
-  mid_right: "todo",
-  bottom_left: "ticker",
-  bottom_right: "",
+  top_left:     ["clock_date"],
+  top_right:    ["weather"],
+  mid_left:     ["calendar"],
+  mid_right:    ["todo"],
+  bottom_left:  ["ticker"],
+  bottom_right: [],
 };
 
 const WIDGETS = [
-  { value: "", label: "Empty" },
+  { value: "",           label: "Empty" },
   { value: "clock_date", label: "Clock & Date" },
-  { value: "weather", label: "Weather" },
-  { value: "calendar", label: "Calendar" },
-  { value: "ticker", label: "Ticker" },
-  { value: "clothing", label: "Clothing" },
-  { value: "stats", label: "Stats" },
-  { value: "todo", label: "To-Do" },
+  { value: "weather",    label: "Weather" },
+  { value: "calendar",   label: "Calendar" },
+  { value: "ticker",     label: "Ticker" },
+  { value: "clothing",   label: "Clothing" },
+  { value: "stats",      label: "Stats" },
+  { value: "todo",       label: "To-Do" },
 ];
 
 const POSITIONS: { key: keyof Layout; label: string }[] = [
@@ -43,6 +40,21 @@ const POSITIONS: { key: keyof Layout; label: string }[] = [
 ];
 
 type Status = "loading" | "idle" | "saving" | "saved" | "error";
+
+function getSlot(zone: string[], idx: number): string {
+  return zone[idx] ?? "";
+}
+
+function setSlot(zone: string[], idx: number, val: string): string[] {
+  const next = [...zone];
+  next[idx] = val;
+  return next;
+}
+
+// Strip trailing empty slots before saving (Pi filters them too, but keep it clean)
+function normalizeZone(zone: string[]): string[] {
+  return zone.filter((v) => v !== "");
+}
 
 export default function LayoutEditor() {
   const [layout, setLayout] = useState<Layout>(DEFAULT_LAYOUT);
@@ -67,6 +79,10 @@ export default function LayoutEditor() {
 
   const save = useCallback(async () => {
     setStatus("saving");
+    const toSave: Layout = {} as Layout;
+    for (const { key } of POSITIONS) {
+      toSave[key] = normalizeZone(layout[key]);
+    }
     try {
       const token = await getIdToken(auth.currentUser!);
       const res = await fetch("/api/layout", {
@@ -75,7 +91,7 @@ export default function LayoutEditor() {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ layout }),
+        body: JSON.stringify({ layout: toSave }),
       });
       if (res.ok) {
         setStatus("saved");
@@ -96,24 +112,36 @@ export default function LayoutEditor() {
   return (
     <div className="space-y-3">
       <p className="text-xs text-zinc-500">
-        Assign a widget to each zone. Changes take effect next time the mirror wakes.
+        Each zone supports up to two stacked widgets. Changes take effect next time the mirror wakes.
       </p>
 
-      {/* 2-column grid mirroring the physical layout */}
       <div className="grid grid-cols-2 gap-2">
         {POSITIONS.map(({ key, label }) => (
-          <div key={key} className="rounded-lg border border-zinc-800 bg-zinc-900 p-3 space-y-1.5">
+          <div key={key} className="rounded-lg border border-zinc-800 bg-zinc-900 p-3 space-y-2">
             <p className="text-xs text-zinc-500">{label}</p>
             <select
-              value={layout[key]}
-              onChange={(e) => setLayout((prev) => ({ ...prev, [key]: e.target.value }))}
+              value={getSlot(layout[key], 0)}
+              onChange={(e) =>
+                setLayout((prev) => ({ ...prev, [key]: setSlot(prev[key], 0, e.target.value) }))
+              }
               className={selectClass}
               disabled={busy}
             >
               {WIDGETS.map((w) => (
-                <option key={w.value} value={w.value}>
-                  {w.label}
-                </option>
+                <option key={w.value} value={w.value}>{w.label}</option>
+              ))}
+            </select>
+            {/* Second widget — only shown/meaningful when first slot is filled */}
+            <select
+              value={getSlot(layout[key], 1)}
+              onChange={(e) =>
+                setLayout((prev) => ({ ...prev, [key]: setSlot(prev[key], 1, e.target.value) }))
+              }
+              className={selectClass}
+              disabled={busy || getSlot(layout[key], 0) === ""}
+            >
+              {WIDGETS.map((w) => (
+                <option key={w.value} value={w.value}>{w.label}</option>
               ))}
             </select>
           </div>
