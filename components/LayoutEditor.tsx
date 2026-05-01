@@ -28,6 +28,7 @@ const WIDGETS = [
   { value: "clothing",   label: "Clothing" },
   { value: "stats",      label: "Stats" },
   { value: "todo",       label: "To-Do" },
+  { value: "ai_recommendation", label: "AI Recommendation" },
 ];
 
 const POSITIONS: { key: keyof Layout; label: string }[] = [

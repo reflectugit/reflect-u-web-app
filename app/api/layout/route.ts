@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { adminAuth, adminDb } from "@/lib/firebase-admin";
 
 const VALID_WIDGETS = new Set([
-  "clock_date", "weather", "calendar", "ticker", "clothing", "stats", "todo",
+  "clock_date", "weather", "calendar", "ticker", "clothing", "stats", "todo", "ai_recommendation",
 ]);
 const POSITIONS = [
   "top_left", "top_right", "mid_left", "mid_right", "bottom_left", "bottom_right",
