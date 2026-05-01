@@ -40,6 +40,7 @@ const POSITIONS: { key: keyof Layout; label: string }[] = [
 ];
 
 type Status = "loading" | "idle" | "saving" | "saved" | "error";
+type PositionKey = keyof Layout;
 
 function getSlot(zone: string[], idx: number): string {
   return zone[idx] ?? "";
@@ -59,6 +60,7 @@ function normalizeZone(zone: string[]): string[] {
 export default function LayoutEditor() {
   const [layout, setLayout] = useState<Layout>(DEFAULT_LAYOUT);
   const [status, setStatus] = useState<Status>("loading");
+  const [showSecond, setShowSecond] = useState<Set<PositionKey>>(new Set());
 
   useEffect(() => {
     (async () => {
@@ -68,7 +70,14 @@ export default function LayoutEditor() {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json() as { layout: Layout | null };
-        if (data.layout) setLayout(data.layout);
+        if (data.layout) {
+          setLayout(data.layout);
+          const expanded = new Set<PositionKey>();
+          for (const { key } of POSITIONS) {
+            if ((data.layout[key]?.length ?? 0) > 1) expanded.add(key);
+          }
+          setShowSecond(expanded);
+        }
       } catch {
         // keep DEFAULT_LAYOUT on error
       } finally {
@@ -116,36 +125,68 @@ export default function LayoutEditor() {
       </p>
 
       <div className="grid grid-cols-2 gap-2">
-        {POSITIONS.map(({ key, label }) => (
-          <div key={key} className="rounded-lg border border-zinc-800 bg-zinc-900 p-3 space-y-2">
-            <p className="text-xs text-zinc-500">{label}</p>
-            <select
-              value={getSlot(layout[key], 0)}
-              onChange={(e) =>
-                setLayout((prev) => ({ ...prev, [key]: setSlot(prev[key], 0, e.target.value) }))
-              }
-              className={selectClass}
-              disabled={busy}
-            >
-              {WIDGETS.map((w) => (
-                <option key={w.value} value={w.value}>{w.label}</option>
-              ))}
-            </select>
-            {/* Second widget — only shown/meaningful when first slot is filled */}
-            <select
-              value={getSlot(layout[key], 1)}
-              onChange={(e) =>
-                setLayout((prev) => ({ ...prev, [key]: setSlot(prev[key], 1, e.target.value) }))
-              }
-              className={selectClass}
-              disabled={busy || getSlot(layout[key], 0) === ""}
-            >
-              {WIDGETS.map((w) => (
-                <option key={w.value} value={w.value}>{w.label}</option>
-              ))}
-            </select>
-          </div>
-        ))}
+        {POSITIONS.map(({ key, label }) => {
+          const firstFilled = getSlot(layout[key], 0) !== "";
+          const hasSecond = showSecond.has(key) || getSlot(layout[key], 1) !== "";
+          return (
+            <div key={key} className="rounded-lg border border-zinc-800 bg-zinc-900 p-3 space-y-2">
+              <p className="text-xs text-zinc-500">{label}</p>
+              <select
+                value={getSlot(layout[key], 0)}
+                onChange={(e) =>
+                  setLayout((prev) => ({ ...prev, [key]: setSlot(prev[key], 0, e.target.value) }))
+                }
+                className={selectClass}
+                disabled={busy}
+              >
+                {WIDGETS.map((w) => (
+                  <option key={w.value} value={w.value}>{w.label}</option>
+                ))}
+              </select>
+
+              {firstFilled && !hasSecond && (
+                <button
+                  type="button"
+                  title="Add a subwidget"
+                  onClick={() => setShowSecond((prev) => new Set(prev).add(key))}
+                  disabled={busy}
+                  className="flex items-center gap-1 text-xs text-zinc-500 hover:text-zinc-300 transition disabled:opacity-30"
+                >
+                  <span className="text-base leading-none">+</span> Add subwidget
+                </button>
+              )}
+
+              {hasSecond && (
+                <div className="flex items-center gap-1">
+                  <select
+                    value={getSlot(layout[key], 1)}
+                    onChange={(e) =>
+                      setLayout((prev) => ({ ...prev, [key]: setSlot(prev[key], 1, e.target.value) }))
+                    }
+                    className={selectClass}
+                    disabled={busy}
+                  >
+                    {WIDGETS.map((w) => (
+                      <option key={w.value} value={w.value}>{w.label}</option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    title="Remove subwidget"
+                    onClick={() => {
+                      setLayout((prev) => ({ ...prev, [key]: setSlot(prev[key], 1, "") }));
+                      setShowSecond((prev) => { const s = new Set(prev); s.delete(key); return s; });
+                    }}
+                    disabled={busy}
+                    className="shrink-0 text-zinc-500 hover:text-zinc-300 transition disabled:opacity-30 text-lg leading-none pb-0.5"
+                  >
+                    ×
+                  </button>
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
 
       <button

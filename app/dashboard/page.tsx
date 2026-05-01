@@ -74,18 +74,6 @@ export default function DashboardPage() {
 
         <div className="space-y-4">
           <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-6">
-            <p className="text-zinc-300">
-              Signed in as <span className="font-mono text-white">{user.email}</span>
-            </p>
-            {!docLoading && userDoc && (
-              <p className="mt-1 text-sm text-zinc-500">
-                Mirror username:{" "}
-                <span className="font-mono text-zinc-300">{userDoc.username}</span>
-              </p>
-            )}
-          </div>
-
-          <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-6">
             <h2 className="mb-3 text-sm font-medium text-zinc-400">Mirror Layout</h2>
             {docLoading ? (
               <p className="text-sm text-zinc-600">Loading…</p>
@@ -115,6 +103,18 @@ export default function DashboardPage() {
               >
                 Connect Google Calendar
               </a>
+            )}
+          </div>
+
+          <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-6">
+            <p className="text-zinc-300">
+              Signed in as <span className="font-mono text-white">{user.email}</span>
+            </p>
+            {!docLoading && userDoc && (
+              <p className="mt-1 text-sm text-zinc-500">
+                Mirror username:{" "}
+                <span className="font-mono text-zinc-300">{userDoc.username}</span>
+              </p>
             )}
           </div>
         </div>

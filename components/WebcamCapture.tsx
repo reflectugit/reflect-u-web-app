@@ -40,6 +40,8 @@ export default function WebcamCapture({ onCapture }: Props) {
     }
   }, []);
 
+  useEffect(() => { startCamera(); }, [startCamera]);
+
   const capture = useCallback(() => {
     const video = videoRef.current;
     const canvas = canvasRef.current;
@@ -99,11 +101,11 @@ export default function WebcamCapture({ onCapture }: Props) {
         <button type="button" onClick={capture} className={inputClass}>
           Take photo
         </button>
-      ) : (
-        <button type="button" onClick={startCamera} className={inputClass}>
-          Start camera
+      ) : camError ? (
+        <button type="button" onClick={startCamera} className={outlineClass}>
+          Retry
         </button>
-      )}
+      ) : null}
     </div>
   );
 }
